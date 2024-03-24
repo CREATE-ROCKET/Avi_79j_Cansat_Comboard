@@ -1,51 +1,73 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
-char gpsreceive[80]={};
+char gpsreceiveC[80]={};
+char gpsreceiveA[80]={};
 int count=0;
-bool gpsflag = false;
-SoftwareSerial mySerial;
+int count1=0;
+SoftwareSerial mySerial(3,1); //RX, TX
 #define UART_RX1 35
 #define UART_RX2 25
-#define UART_RXD 18
+#define UART_RXD 19
 #define UART_TX1 26
 #define UART_TX2 33
-#define UART_TXD 19
+#define UART_TXD 18
 
 void setup(){
-    Serial.begin(9600, SERIAL_8N1, UART_RXD, UART_TXD);   // gps
-    Serial1.begin(115200, SERIAL_8N1, UART_RX1, UART_TX1);  // teilite1
-    Serial2.begin(115200, SERIAL_8N1, UART_RX2, UART_TX2);  // teilite2
-    mySerial.begin(115200) // to Log
+    Serial.begin(9600, SERIAL_8N1, UART_RXD, UART_TXD);     // gps
+    Serial2.begin(115200, SERIAL_8N1, UART_RX1, UART_TX1);  // teilite1
+    Serial1.begin(115200, SERIAL_8N1, UART_RX2, UART_TX2);  // teilite2
+    mySerial.begin(115200);
 }
 
+
+// ログ基盤に缶サットのGPSを送る
 void loop(){
     if (Serial.available()){ 
         char j = Serial.read();
-        // Serial1.write(j);
-        gpsreceive[count]=j;
+        //                                                                                                                                                Serial1.write(j);
+        gpsreceiveC[count]=j;
         count++;
-        if(count>79||j==0x0A){
-            if(gpsflag == true){
-            Serial2.write(gpsreceive,count);
-            mySerial.write(gpsreceive,count);
-            }
+        if(count>79 || j==0x0A){
+            Serial1.print("CansatGPS:");
+            Serial1.write(gpsreceiveC,count);
+            mySerial.write(gpsreceiveC,count);
             count=0;
             for(int i=0;i<80;i++){
-            gpsreceive[i]=0;
+            gpsreceiveC[i]=0;
             }
         }
     }
 
+
+// 中継
     if (Serial2.available()){
-        char cmd = Serial2.read();
-        Serial1.write(cmd);
+        u_int8_t cmd = Serial2.read();
+        char rcmd = char(cmd);
+        gpsreceiveA[count1]=rcmd;
+        count1++;
+        if(count1>79 || rcmd==0x0A){
+           // Serial2.print("receive2");
+           // Serial2.write(gpsreceiveA,count);
+            Serial1.print("GPS from Hontai :");
+            Serial1.write(gpsreceiveA,count1);
+            count1=0;
+            for(int i=0;i<80;i++){
+            gpsreceiveA[i]=0;
+            }
+        }
     }
 
+//　ログ基盤に本体のkomanndoを送る
     if (Serial1.available()){
         char cmd = Serial1.read();
-        mySerial.write(cmd);
-        if(cmd == 'g'){
-            !gpsflag;
+        Serial1.println(cmd);
+        if(cmd == 'h'){
+            Serial.write("$PMTK161,0*28\r\n");
+        }else if(cmd =='g'){
+            Serial.write("$PMTK161,1*29\r\n");
+            
+        }else{
+            mySerial.write(cmd);
         }
     }
 }
