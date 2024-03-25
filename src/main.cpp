@@ -4,6 +4,8 @@ char gpsreceiveC[80]={}; // 缶サット用
 char gpsreceiveH[80]={}; // 本体用
 int count=0;  // 本体カウント
 int countH=0; // 缶サットカウント
+char rcmd;
+char cmd;
 SoftwareSerial mySerial(3,1); // RX, TX
 #define UART_RX1 35
 #define UART_RX2 25
@@ -31,7 +33,7 @@ void loop(){
         gpsreceiveC[count]=j;
         count++;
         if(count>79 || j==0x0A){
-            Serial1.print("CansatGPS :");
+            Serial1.print("Cansat GPS :");
             Serial1.write(gpsreceiveC,count);
             mySerial.write(gpsreceiveC,count);
             count=0;
@@ -45,7 +47,7 @@ void loop(){
 // 中継
     if (Serial2.available()){
         u_int8_t cmd = Serial2.read();
-        char rcmd = char(cmd);
+        rcmd = char(cmd);
         gpsreceiveH[countH]=rcmd;
         countH++;
         if(countH>79 || rcmd==0x0A){
@@ -60,16 +62,20 @@ void loop(){
 
 //　本部からコマンドを受け取る
     if (Serial1.available()){
-        char cmd = Serial1.read();
+        cmd = Serial1.read();
         Serial1.println(cmd);
         if(cmd == 'h'){
             Serial.write("$PMTK161,0*28\r\n");
+            Serial1.println("GPS_OFF");
         }else if(cmd =='g'){
             Serial.write("$PMTK161,1*29\r\n");
+            Serial1.println("GPS_ON");
         }else if(cmd =='r'){
             digitalWrite(LED, HIGH);
+            Serial1.println("LED_ON");
         }else if (cmd =='t'){
             digitalWrite(LED, LOW);
+            Serial1.println("LED_OFF");
         }else{
             mySerial.write(cmd);
         }
